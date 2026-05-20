@@ -69,31 +69,27 @@
         }
         
         function displayGuestTodos(todos) {
-            const todosList = document.getElementById('guestTodosList');
-            
-            if (todos.length === 0) {
-                todosList.innerHTML = '<p class="text-white text-center">No guest todos yet. Create one above!</p>';
-                return;
-            }
-            
-            todosList.innerHTML = todos.map(todo => `
-                <div class="bg-white rounded-xl shadow-lg p-6 ${todo.status === 'COMPLETED' ? 'opacity-75' : ''}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 ${todo.status === 'COMPLETED' ? 'line-through' : ''}">${todo.title}</h3>
-                            <p class="text-gray-600 mb-3">${todo.body || 'No description'}</p>
-                            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                                todo.status === 'COMPLETED' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-yellow-100 text-yellow-800'
-                            }">
-                                ${todo.status}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
+    const todosList = document.getElementById('guestTodosList');
+
+    if (todos.length === 0) {
+        todosList.innerHTML = '<p class="text-white text-center">No guest todos yet. Create one above!</p>';
+        return;
+    }
+
+    let html = '';
+
+    todos.forEach(todo => {
+        html += `
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">${todo.title}</h3>
+                <p class="text-gray-600 mb-3">${todo.body || 'No description'}</p>
+                <span class="text-xs text-gray-400">${new Date(todo.created_at).toLocaleDateString()}</span>
+            </div>
+        `;
+    });
+
+    todosList.innerHTML = html;
+}
         
         async function createGuestTodo(title, body) {
             try {
