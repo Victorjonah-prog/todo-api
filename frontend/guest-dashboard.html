@@ -60,7 +60,7 @@
         
         async function fetchGuestTodos() {
             try {
-                const response = await fetch(`${API_BASE}/guest/todos`);
+                const response = await fetch(`${API_BASE_URL}/guest/todos`);
                 const todos = await response.json();
                 displayGuestTodos(todos);
             } catch (error) {
@@ -97,7 +97,7 @@
         
         async function createGuestTodo(title, body) {
             try {
-                const response = await fetch(`${API_BASE}/guest/todos`, {
+                const response = await fetch(`${API_BASE_URL}/guest/todos`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
