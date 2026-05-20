@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Dashboard - Todo App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-500 to-pink-600 p-4">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Guest Todos</h1>
+                <a 
+                    href="login.html"
+                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+                >
+                    Login
+                </a>
+            </div>
+            
+            <p class="text-gray-600 mb-6">Create and view public todos without signing in. Anyone can see these todos!</p>
+            
+            <form id="guestTodoForm" class="space-y-4 mb-8">
+                <div>
+                    <input 
+                        type="text" 
+                        id="guestTodoTitle" 
+                        placeholder="Todo title"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                    >
+                </div>
+                <div>
+                    <textarea 
+                        id="guestTodoBody" 
+                        placeholder="Todo description (optional)"
+                        rows="3"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none"
+                    ></textarea>
+                </div>
+                <button 
+                    type="submit"
+                    class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
+                    Add Public Todo
+                </button>
+            </form>
+            
+            <p id="errorMessage" class="mt-4 text-red-500 hidden"></p>
+        </div>
+        
+        <div id="guestTodosList" class="space-y-4">
+            <p class="text-white text-center">Loading guest todos...</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "https://todo-api-ueis.onrender.com/api/v1";
+        
+        async function fetchGuestTodos() {
+            try {
+                const response = await fetch(`${API_BASE}/guest/todos`);
+                const todos = await response.json();
+                displayGuestTodos(todos);
+            } catch (error) {
+                console.error('Error fetching guest todos:', error);
+            }
+        }
+        
+        function displayGuestTodos(todos) {
+            const todosList = document.getElementById('guestTodosList');
+            
+            if (todos.length === 0) {
+                todosList.innerHTML = '<p class="text-white text-center">No guest todos yet. Create one above!</p>';
+                return;
+            }
+            
+            todosList.innerHTML = todos.map(todo => `
+                <div class="bg-white rounded-xl shadow-lg p-6 ${todo.status === 'COMPLETED' ? 'opacity-75' : ''}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2 ${todo.status === 'COMPLETED' ? 'line-through' : ''}">${todo.title}</h3>
+                            <p class="text-gray-600 mb-3">${todo.body || 'No description'}</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                                todo.status === 'COMPLETED' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${todo.status}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function createGuestTodo(title, body) {
+            try {
+                const response = await fetch(`${API_BASE}/guest/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, body })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('guestTodoTitle').value = '';
+                    document.getElementById('guestTodoBody').value = '';
+                    fetchGuestTodos();
+                } else {
+                    const error = await response.json();
+                    showError(error.detail || 'Failed to create guest todo');
+                }
+            } catch (error) {
+                showError('Error connecting to server');
+            }
+        }
+        
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 3000);
+        }
+        
+        document.getElementById('guestTodoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('guestTodoTitle').value;
+            const body = document.getElementById('guestTodoBody').value;
+            createGuestTodo(title, body);
+        });
+        
+        fetchGuestTodos();
+    </script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Todo App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-4">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">My Todos</h1>
+                <button 
+                    onclick="logout()"
+                    class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                >
+                    Logout
+                </button>
+            </div>
+            
+            <form id="todoForm" class="space-y-4 mb-8">
+                <div>
+                    <input 
+                        type="text" 
+                        id="todoTitle" 
+                        placeholder="Todo title"
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    >
+                </div>
+                <div>
+                    <textarea 
+                        id="todoBody" 
+                        placeholder="Todo description (optional)"
+                        rows="3"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                    ></textarea>
+                </div>
+                <button 
+                    type="submit"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                    Add Todo
+                </button>
+            </form>
+            
+            <p id="errorMessage" class="mt-4 text-red-500 hidden"></p>
+        </div>
+        
+        <div id="todosList" class="space-y-4">
+            <p class="text-white text-center">Loading todos...</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "https://todo-api-ueis.onrender.com/api/v1";
+        
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+        
+        async function fetchTodos() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/todos`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                const todos = await response.json();
+                displayTodos(todos);
+            } catch (error) {
+                console.error('Error fetching todos:', error);
+            }
+        }
+        
+        function displayTodos(todos) {
+            const todosList = document.getElementById('todosList');
+            
+            if (todos.length === 0) {
+                todosList.innerHTML = '<p class="text-white text-center">No todos yet. Create one above!</p>';
+                return;
+            }
+            
+            todosList.innerHTML = todos.map(todo => `
+                <div class="bg-white rounded-xl shadow-lg p-6 ${todo.status === 'COMPLETED' ? 'opacity-75' : ''}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2 ${todo.status === 'COMPLETED' ? 'line-through' : ''}">${todo.title}</h3>
+                            <p class="text-gray-600 mb-3">${todo.body || 'No description'}</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                                todo.status === 'COMPLETED' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${todo.status}
+                            </span>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button 
+                                onclick="toggleTodoStatus(${todo.id}, '${todo.status}')"
+                                class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition text-sm"
+                            >
+                                ${todo.status === 'COMPLETED' ? 'Undo' : 'Complete'}
+                            </button>
+                            <button 
+                                onclick="deleteTodo(${todo.id})"
+                                class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition text-sm"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function createTodo(title, body) {
+            const token = getToken();
+            
+            try {
+                const response = await fetch(`${API_BASE}/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, body })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('todoTitle').value = '';
+                    document.getElementById('todoBody').value = '';
+                    fetchTodos();
+                } else {
+                    const error = await response.json();
+                    showError(error.detail || 'Failed to create todo');
+                }
+            } catch (error) {
+                showError('Error connecting to server');
+            }
+        }
+        
+        async function toggleTodoStatus(todoId, currentStatus) {
+            const token = getToken();
+            const newStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+            
+            try {
+                const response = await fetch(`${API_BASE}/todos/${todoId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    fetchTodos();
+                } else {
+                    showError('Failed to update todo');
+                }
+            } catch (error) {
+                showError('Error connecting to server');
+            }
+        }
+        
+        async function deleteTodo(todoId) {
+            const token = getToken();
+            
+            if (!confirm('Are you sure you want to delete this todo?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/todos/${todoId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    fetchTodos();
+                } else {
+                    showError('Failed to delete todo');
+                }
+            } catch (error) {
+                showError('Error connecting to server');
+            }
+        }
+        
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 3000);
+        }
+        
+        document.getElementById('todoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('todoTitle').value;
+            const body = document.getElementById('todoBody').value;
+            createTodo(title, body);
+        });
+        
+        fetchTodos();
+    </script>
+</body>
+</html>
